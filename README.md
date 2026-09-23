@@ -1,10 +1,10 @@
 # AgentLedger
 
-**Turn local engineering work into an inspectable graph of checks, artifacts and review decisions.**
+**Run dependent local commands and record their results, output hashes and reviews.**
 
-AgentLedger is an original TypeScript/Node.js tool by nazeeh111. It schedules explicitly declared local commands, records their outcomes, verifies artifact hashes and produces an offline report. An optional Codex CLI task adds a structured **model opinion** alongside automated evidence. A model saying “approved” never turns a failing command into a passing check.
+AgentLedger is a TypeScript/Node.js tool that schedules declared local commands, records their outcomes, verifies artifact hashes and produces an offline report. Optional Codex CLI reviews appear separately from command results and cannot override failed checks.
 
-No API key, paid service, global plugin or live model call is needed for the offline example. Node.js 24+ and macOS/Linux are required for execution; process groups provide timeout/cancellation handling.
+Execution requires Node.js 24+ and macOS/Linux, where process groups provide timeout and cancellation handling. The offline example runs without Codex or an API key.
 
 ## Run the complete offline example
 
@@ -29,9 +29,9 @@ flowchart LR
 
 [View the offline example report](https://nazeeh111.github.io/AgentLedger/), [inspect the generated offline JSON evidence](docs/demo/report.json) or download and open the [self-contained example report](docs/demo/index.html). These artifacts came from the actual four-task local run, with no model call.
 
-## Why this exists
+## Recorded evidence
 
-Task logs alone do not tell you whether a required file exists, whether it changed after a check, or whether an agent's assessment rests on a passing test. AgentLedger keeps those questions separate:
+Each report separates command results, file checks and reviews:
 
 - **Command evidence:** argument array, expected and actual exit result, attempts, duration and dependency status.
 - **Artifact evidence:** bounded regular files, SHA-256 hashes and optional expected hashes.
@@ -93,7 +93,7 @@ Do not put credentials in manifests, arguments, prompts, filenames or task outpu
 
 Manifests are capped at 1 MiB and depth 32, input/artifact files at 32 MiB each, and output capture is bounded. Files are streamed for hashing. These checks reduce accidental workloads; they do not provide CPU/memory isolation for arbitrary commands or defend against a hostile local administrator. Reports are unsigned local evidence and can be edited. A passed task proves only its declared exit criterion and artifact checks, not general correctness, security, benchmark performance or human approval.
 
-See [SECURITY.md](SECURITY.md). No “self-improvement,” hundreds-of-agents throughput, or fully autonomous correctness claims are made.
+See [SECURITY.md](SECURITY.md) for the execution and trust model.
 
 ## Development and exits
 
@@ -107,6 +107,6 @@ node dist/cli.js --help
 
 Exit 0: plan validated or run passed. Exit 1: completed run has failed/skipped/timed-out tasks. Exit 2: configuration/setup/report error. Exit 130: cancelled run with report saved where possible. Synthetic automated tests exercise real subprocesses with a fake model CLI. The separate opt-in live integration check used the existing local Codex sign-in; no credentials were read or included in reports.
 
-**Publication note:** Built locally using Git before publication. Upload timestamps record publication of this version, not invented development dates.
+**Development history:** Developed locally with Git before publication.
 
 Original software © 2026 nazeeh111, [MIT](LICENSE). Codex is an optional external tool; AgentLedger is not affiliated with OpenAI.

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+demo-report/
+ledger-report/
+codex-report/
+example-output/
+*.tsbuildinfo
+.DS_Store
+final-demo/
+/_site/
+/HANDOFF.md

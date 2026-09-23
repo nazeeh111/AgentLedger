@@ -1,0 +1,25 @@
+{
+  "name": "agent-ledger",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Evidence-first local work graphs with bounded execution and an opt-in Codex CLI adapter",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.ts",
+    "check": "tsc --noEmit",
+    "plan": "node src/cli.ts examples/offline.json",
+    "demo": "node src/cli.ts examples/offline.json --execute --out demo-report",
+    "build": "tsc",
+    "format": "prettier --write src tests examples *.json *.md",
+    "format:check": "prettier --check src tests examples *.json *.md"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3"
+  }
+}

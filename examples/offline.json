@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "name": "Offline artifact proof",
+  "concurrency": 2,
+  "tasks": [
+    {
+      "id": "build",
+      "inputs": ["examples/build.mjs"],
+      "command": ["node", "examples/build.mjs"],
+      "artifacts": [{ "path": "example-output/result.json" }]
+    },
+    {
+      "id": "independent",
+      "inputs": ["examples/independent.mjs"],
+      "command": ["node", "examples/independent.mjs"],
+      "artifacts": [{ "path": "example-output/reference.json" }]
+    },
+    {
+      "id": "verify",
+      "deps": ["build", "independent"],
+      "inputs": [
+        "examples/verify.mjs",
+        "example-output/result.json",
+        "example-output/reference.json"
+      ],
+      "command": ["node", "examples/verify.mjs"]
+    },
+    {
+      "id": "review",
+      "deps": ["build", "independent", "verify"],
+      "review": {
+        "checks": ["verify"],
+        "artifacts": [
+          { "task": "build", "path": "example-output/result.json" },
+          { "task": "independent", "path": "example-output/reference.json" }
+        ]
+      }
+    }
+  ]
+}

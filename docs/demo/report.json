@@ -1,0 +1,106 @@
+{
+  "schema": "agent-ledger-v1",
+  "name": "Offline artifact proof",
+  "node": "v24.14.0",
+  "startedAt": "2026-09-23T19:46:39.954Z",
+  "finishedAt": "2026-09-23T19:46:40.014Z",
+  "status": "passed",
+  "tasks": [
+    {
+      "id": "build",
+      "dependencies": [],
+      "cwd": ".",
+      "expectedExit": 0,
+      "status": "success",
+      "attempts": 1,
+      "durationMs": 31.175667000000004,
+      "fingerprint": "afecb7b3ad02792be7709bf4d5bafc334a42fba0f575ed376927514fdc688082",
+      "exitCode": 0,
+      "artifacts": [
+        {
+          "path": "example-output/result.json",
+          "sha256": "1f7804b70d323441e818abd77fa6ef0d92fe02ff1d4ea4d32e0e9534fc197593",
+          "bytes": 444
+        }
+      ],
+      "command": [
+        "node",
+        "examples/build.mjs"
+      ]
+    },
+    {
+      "id": "independent",
+      "dependencies": [],
+      "cwd": ".",
+      "expectedExit": 0,
+      "status": "success",
+      "attempts": 1,
+      "durationMs": 31.058375000000005,
+      "fingerprint": "226ad3c016a9da5678e4dafa8e4616439bcc72eee9b1992cd30942ef214aff90",
+      "exitCode": 0,
+      "artifacts": [
+        {
+          "path": "example-output/reference.json",
+          "sha256": "1f7804b70d323441e818abd77fa6ef0d92fe02ff1d4ea4d32e0e9534fc197593",
+          "bytes": 444
+        }
+      ],
+      "command": [
+        "node",
+        "examples/independent.mjs"
+      ]
+    },
+    {
+      "id": "verify",
+      "dependencies": [
+        "build",
+        "independent"
+      ],
+      "cwd": ".",
+      "expectedExit": 0,
+      "status": "success",
+      "attempts": 1,
+      "durationMs": 25.071542000000008,
+      "fingerprint": "306577e67f367c9011a67a073f367d54a16ad5f966a24f595de67a7fe0902329",
+      "exitCode": 0,
+      "artifacts": [],
+      "command": [
+        "node",
+        "examples/verify.mjs"
+      ]
+    },
+    {
+      "id": "review",
+      "dependencies": [
+        "build",
+        "independent",
+        "verify"
+      ],
+      "cwd": ".",
+      "expectedExit": 0,
+      "status": "success",
+      "attempts": 1,
+      "durationMs": 0.5633749999999935,
+      "fingerprint": "85e38d9dd72df8b2a49dcc47ce6c39a95f72a01941cef23c6c8a25e16febb608",
+      "exitCode": null,
+      "artifacts": [],
+      "automatedProof": {
+        "checks": [
+          "verify"
+        ],
+        "artifacts": [
+          {
+            "path": "example-output/result.json",
+            "sha256": "1f7804b70d323441e818abd77fa6ef0d92fe02ff1d4ea4d32e0e9534fc197593",
+            "bytes": 444
+          },
+          {
+            "path": "example-output/reference.json",
+            "sha256": "1f7804b70d323441e818abd77fa6ef0d92fe02ff1d4ea4d32e0e9534fc197593",
+            "bytes": 444
+          }
+        ]
+      }
+    }
+  ]
+}

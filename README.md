@@ -85,7 +85,7 @@ node src/cli.ts examples/codex-review.json --out codex-report --execute --allow-
 
 This uses the installed `codex` CLI and existing sign-in. It does not read credential stores, install hooks, select a model, purchase credits or configure an API key. It invokes `codex exec --json --output-schema … -s read-only -C … --output-last-message … -`, supplying the prompt through stdin. Native sandbox and approval protections stay enabled. A Git repository and working local Codex setup are normally required. The user-selected default model is retained. Model work consumes the user's existing usage allowance and is never part of the default offline demo.
 
-The adapter is verified with a fake CLI that checks arguments and emits a bounded structured opinion. **No live Codex run is claimed by the local verification.** Consult [Codex non-interactive documentation](https://learn.chatgpt.com/docs/non-interactive-mode) for CLI behavior; [`examples/codex-review.json`](examples/codex-review.json) is a runnable opt-in template, not a precomputed model result.
+The adapter has automated fake-CLI checks plus one live integration run on September 23, 2026: all five example tasks passed using the installed Codex CLI, its native read-only sandbox and the user-configured model. The model opinion returned in about 27 seconds, separately from the three successful command checks and artifact gate. This verifies that example integration, not every model or CLI configuration. Consult [Codex non-interactive documentation](https://learn.chatgpt.com/docs/non-interactive-mode) for CLI behavior; [`examples/codex-review.json`](examples/codex-review.json) is a runnable opt-in template, not a precomputed model result.
 
 ## Privacy and limits
 
@@ -105,7 +105,7 @@ npm run build
 node dist/cli.js --help
 ```
 
-Exit 0: plan validated or run passed. Exit 1: completed run has failed/skipped/timed-out tasks. Exit 2: configuration/setup/report error. Exit 130: cancelled run with report saved where possible. Synthetic offline tests exercise real subprocesses; no live model or actual credentials are used.
+Exit 0: plan validated or run passed. Exit 1: completed run has failed/skipped/timed-out tasks. Exit 2: configuration/setup/report error. Exit 130: cancelled run with report saved where possible. Synthetic automated tests exercise real subprocesses with a fake model CLI. The separate opt-in live integration check used the existing local Codex sign-in; no credentials were read or included in reports.
 
 **Publication note:** Built locally using Git before publication. Upload timestamps record publication of this version, not invented development dates.
 

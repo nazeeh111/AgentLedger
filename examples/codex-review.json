@@ -36,10 +36,16 @@
     {
       "id": "opinion",
       "deps": ["verify"],
-      "inputs": ["example-output/result.json"],
+      "inputs": [
+        "examples/build.mjs",
+        "examples/independent.mjs",
+        "examples/verify.mjs",
+        "example-output/result.json"
+      ],
       "codex": {
         "prompt": "Read examples/build.mjs, examples/independent.mjs and examples/verify.mjs without changing files. Review whether the independent check supports the generated triangular-number artifact. Return verdict approve, changes, or inconclusive and a concise rationale. Your response is an opinion, not proof."
-      }
+      },
+      "timeoutMs": 180000
     },
     {
       "id": "review",

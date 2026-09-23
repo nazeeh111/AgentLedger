@@ -340,7 +340,8 @@ test("HTML report escapes names, arguments and opinions without remote resources
   assert.ok(document.includes("&lt;script&gt;"));
   assert.ok(!document.includes("<script>"));
   assert.ok(!document.includes("<img"));
-  assert.ok(document.includes("Model opinion · not proof"));
+  assert.ok(document.includes("Model review"));
+  assert.ok(document.includes("Model reviews do not change command outcomes."));
 });
 test("Codex requires separate opt-in; fake CLI respects native flags and structured opinion", async () => {
   const r = await root();

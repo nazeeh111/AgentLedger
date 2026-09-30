@@ -100,9 +100,9 @@ export async function atomic(target: string, data: string): Promise<void> {
     await fs.rm(tmp, { force: true });
   }
 }
-export function parseManifest(text: string): unknown {
-  if (Buffer.byteLength(text) > 1024 * 1024)
-    throw Error("Manifest exceeds 1 MiB");
+export function parseManifest(text: string, maxBytes = 1024 * 1024): unknown {
+  if (Buffer.byteLength(text) > maxBytes)
+    throw Error("JSON metadata exceeds size limit");
   const parsed: unknown = JSON.parse(text);
   let i = 0;
   const ws = () => {

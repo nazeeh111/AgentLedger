@@ -3,6 +3,11 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { canonical, hash, confined, fileHash, atomic } from "./files.ts";
+import {
+  RecoveryCheckpoint,
+  resumeCandidates,
+  CheckpointPersistenceError,
+} from "./checkpoint.ts";
 import type { Workflow, Task } from "./schema.ts";
 export type Status =
   | "success"
@@ -205,7 +210,7 @@ export async function execute(
   const implementation = hash(
     Buffer.concat(
       await Promise.all(
-        ["runner", "schema", "files"].map((name) =>
+        ["runner", "schema", "files", "checkpoint"].map((name) =>
           fs.readFile(new URL(`./${name}${extension}`, import.meta.url)),
         ),
       ),
@@ -231,30 +236,9 @@ export async function execute(
   if (workflow.tasks.some((t) => t.codex) && !options.allowCodex)
     throw Error("Codex tasks require explicit --allow-codex");
   const marker = path.join(output, ".agent-ledger");
-  let previous: RunReport | undefined;
+  let previous: Result[] = [];
   if (options.resume) {
-    await confined(root, path.posix.join(options.out, ".agent-ledger"));
-    await confined(root, path.posix.join(options.out, "report.json"));
-    const markerStat = await fs.stat(marker),
-      reportStat = await fs.stat(path.join(output, "report.json"));
-    if (
-      !markerStat.isFile() ||
-      markerStat.size > 32 ||
-      !reportStat.isFile() ||
-      reportStat.size > 8 * 1024 * 1024
-    )
-      throw Error("Invalid or oversized resume metadata");
-    if ((await fs.readFile(marker, "utf8")) !== "agent-ledger-v1\n")
-      throw Error("Not an AgentLedger report directory");
-    const prev = await fs.readFile(path.join(output, "report.json"), "utf8");
-    if (Buffer.byteLength(prev) > 8 * 1024 * 1024)
-      throw Error("Previous report exceeds limit");
-    previous = JSON.parse(prev);
-    if (
-      previous?.schema !== "agent-ledger-v1" ||
-      !Array.isArray(previous.tasks)
-    )
-      throw Error("Invalid previous report");
+    previous = await resumeCandidates(root, options.out);
   } else {
     await fs.mkdir(output, { recursive: false, mode: 0o700 });
     await fs.writeFile(marker, "agent-ledger-v1\n", {
@@ -265,6 +249,21 @@ export async function execute(
   const results = new Map<string, Result>(),
     running = new Map<string, Promise<void>>();
   const start = new Date().toISOString();
+  const recovery = new RecoveryCheckpoint(
+    output,
+    workflow,
+    previous,
+    start,
+    options.includeOutput,
+  );
+  await recovery.initialize();
+  const stop = new AbortController();
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, stop.signal])
+    : stop.signal;
+  const active = new Set<Promise<void>>();
+  let persistenceFailure: unknown;
+
   const blank = (t: Task, status: Status, reason: string): Result => ({
     id: t.id,
     dependencies: t.deps,
@@ -305,12 +304,12 @@ export async function execute(
             artifacts: results.get(id)!.artifacts,
           })),
           node: process.version,
-          runner: "0.1.0",
+          runner: "0.2.0",
           implementation,
         }),
       );
       if (t.command && previous) {
-        const old = previous.tasks.find((x) => x.id === t.id);
+        const old = previous.find((x) => x.id === t.id);
         if (passed(old) && old!.fingerprint === fingerprint) {
           try {
             const artifacts = await collect(t);
@@ -399,16 +398,13 @@ export async function execute(
       }
       let last: Result = blank(t, "failed", "Task did not run");
       for (let attempt = 1; attempt <= t.retries + 1; attempt++) {
-        if (options.signal?.aborted)
+        if (signal.aborted)
           return { ...blank(t, "cancelled", "Run cancelled"), fingerprint };
         await verifyInputs();
-        const run = await processTask(
-          command,
-          cwd,
-          t.timeoutMs,
-          options.signal,
-          stdin,
-        );
+        await recovery.inFlight(t.id);
+        if (signal.aborted)
+          return { ...blank(t, "cancelled", "Run cancelled"), fingerprint };
+        const run = await processTask(command, cwd, t.timeoutMs, signal, stdin);
         last = {
           id: t.id,
           dependencies: t.deps,
@@ -461,6 +457,7 @@ export async function execute(
       }
       return last;
     } catch (e) {
+      if (e instanceof CheckpointPersistenceError) throw e;
       return {
         ...blank(t, "failed", (e as Error).message),
         fingerprint,
@@ -479,34 +476,54 @@ export async function execute(
     }
     return artifacts;
   }
-  while (results.size < workflow.tasks.length) {
-    for (const t of workflow.tasks) {
-      if (results.has(t.id) || running.has(t.id)) continue;
-      if (options.signal?.aborted) {
-        results.set(t.id, blank(t, "cancelled", "Run cancelled before start"));
-        continue;
+  try {
+    while (results.size < workflow.tasks.length) {
+      if (persistenceFailure) throw persistenceFailure;
+      for (const t of workflow.tasks) {
+        if (results.has(t.id) || running.has(t.id)) continue;
+        if (signal.aborted) {
+          const cancelled = blank(t, "cancelled", "Run cancelled before start");
+          await recovery.settled(cancelled);
+          results.set(t.id, cancelled);
+          continue;
+        }
+        if (!t.deps.every((id) => results.has(id))) continue;
+        if (t.deps.some((id) => !passed(results.get(id)))) {
+          const skipped = blank(
+            t,
+            "skipped",
+            "An upstream dependency did not pass",
+          );
+          await recovery.settled(skipped);
+          results.set(t.id, skipped);
+          continue;
+        }
+        if (running.size >= workflow.concurrency) break;
+        const promise = task(t)
+          .then(async (r) => {
+            await recovery.settled(r);
+            results.set(t.id, r);
+          })
+          .catch((error) => {
+            persistenceFailure ??= error;
+            stop.abort();
+          })
+          .finally(() => {
+            running.delete(t.id);
+            active.delete(promise);
+          });
+        active.add(promise);
+        running.set(t.id, promise);
       }
-      if (!t.deps.every((id) => results.has(id))) continue;
-      if (t.deps.some((id) => !passed(results.get(id)))) {
-        results.set(
-          t.id,
-          blank(t, "skipped", "An upstream dependency did not pass"),
-        );
-        continue;
-      }
-      if (running.size >= workflow.concurrency) break;
-      const promise = task(t)
-        .then((r) => {
-          results.set(t.id, r);
-        })
-        .finally(() => {
-          running.delete(t.id);
-        });
-      running.set(t.id, promise);
+      if (running.size) await Promise.race(running.values());
+      else if (results.size < workflow.tasks.length)
+        throw Error("Scheduler made no progress");
     }
-    if (running.size) await Promise.race(running.values());
-    else if (results.size < workflow.tasks.length)
-      throw Error("Scheduler made no progress");
+    if (persistenceFailure) throw persistenceFailure;
+  } catch (error) {
+    stop.abort();
+    await Promise.allSettled(active);
+    throw error;
   }
   const tasks = workflow.tasks.map((t) => results.get(t.id)!);
   return {

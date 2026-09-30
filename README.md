@@ -76,6 +76,16 @@ Default mode validates and prints the plan without creating a report directory o
 
 Resume reuses successful **command tasks** only when task specification, canonical execution root and working directory, declared input hashes, dependency fingerprints, artifact hashes, runner implementation hash and Node version match. Changed inputs/specifications or missing/tampered artifacts cause reruns; downstream fingerprints invalidate as appropriate. Declared inputs are rechecked before each attempt and after execution; a detected mutation fails the task rather than producing reusable evidence. This is a before/after check, not a filesystem snapshot: concurrent edits restored between checks can escape detection, so keep inputs stable during a run. Review gates always rerun. Codex opinions always rerun with fresh output paths and still require opt-in. External services, undeclared files and changes in non-Node executables/environment are not automatically fingerprinted: declare every relevant input or use a new report directory for a fresh run.
 
+### Recover an interrupted run
+
+After a crash or forced stop, first ensure commands from the old run have stopped. Then rerun the same `--execute --resume` command. A completed producer can be reused even if a later task was interrupted and no final report was saved.
+
+AgentLedger persists progress in `.agent-ledger-checkpoint.json` inside the managed report directory. Before launching each command attempt it records that task as in flight, removing any earlier reusable success. It saves verified results before starting dependent tasks. An unfinished attempt reruns even if it left artifact bytes identical to a prior successful run. Concurrent task completions are saved in order.
+
+The checkpoint takes precedence over `report.json`; malformed or unreadable checkpoints stop resume rather than falling back to stale successes. A legacy report is read only when the checkpoint is absent. Runner changes can invalidate old fingerprints. A checkpoint write failure stops scheduling, cancels and waits for the current run's owned children, and leaves the previous final report unchanged. Final HTML and JSON reports are still written only after execution finishes.
+
+Recovery does not guarantee exactly one execution: a command can produce side effects before its result is saved. Checkpoints use atomic file replacement, without a power-loss persistence guarantee. A killed coordinator can leave children running; recovery does not find or terminate those old processes. Settle them before resuming and use only one coordinator per report directory. Keep the checkpoint with its managed directory; deleting it can restore the legacy-report fallback.
+
 ## Optional Codex adapter
 
 ```sh
@@ -89,9 +99,9 @@ The adapter has automated fake-CLI checks plus one live integration run on Septe
 
 ## Privacy and limits
 
-Do not put credentials in manifests, arguments, prompts, filenames or task output. Reports record exact command arguments, paths and artifact hashes. Child stdout/stderr is **omitted by default**; `--include-output` explicitly includes up to 64 KiB and marks truncation. Opting out on resume removes previously captured output from the new report. Structured model opinions are included and may contain workspace details. The CLI inherits only a small environment allowlist needed for command discovery, home/temp paths, locale and existing Codex configuration; arbitrary task code can still read whatever the OS permits.
+Do not put credentials in manifests, arguments, prompts, filenames or task output. Reports record exact command arguments, paths and artifact hashes. Child stdout/stderr is **omitted by default**; `--include-output` explicitly includes up to 64 KiB and marks truncation. Opting out on resume removes previously captured output from the new report and checkpoint. Structured model opinions are included and may contain workspace details. The CLI inherits only a small environment allowlist needed for command discovery, home/temp paths, locale and existing Codex configuration; arbitrary task code can still read whatever the OS permits.
 
-Manifests are capped at 1 MiB and depth 32, input/artifact files at 32 MiB each, and output capture is bounded. Files are streamed for hashing. These checks reduce accidental workloads; they do not provide CPU/memory isolation for arbitrary commands or defend against a hostile local administrator. Reports are unsigned local evidence and can be edited. A passed task proves only its declared exit criterion and artifact checks, not general correctness, security, benchmark performance or human approval.
+Manifests are capped at 1 MiB and depth 32, input/artifact files at 32 MiB each, resume metadata at 8 MiB and depth 32, and output capture is bounded. Files are streamed for hashing. These checks reduce accidental workloads; they do not provide CPU/memory isolation for arbitrary commands or defend against a hostile local administrator. Reports are unsigned local evidence and can be edited. A passed task proves only its declared exit criterion and artifact checks, not general correctness, security, benchmark performance or human approval.
 
 See [SECURITY.md](SECURITY.md) for the execution and trust model.
 
@@ -105,7 +115,7 @@ npm run build
 node dist/cli.js --help
 ```
 
-Exit 0: plan validated or run passed. Exit 1: completed run has failed/skipped/timed-out tasks. Exit 2: configuration/setup/report error. Exit 130: cancelled run with report saved where possible. Synthetic automated tests exercise real subprocesses with a fake model CLI. The separate opt-in live integration check used the existing local Codex sign-in; no credentials were read or included in reports.
+Exit 0: plan validated or run passed. Exit 1: completed run has failed/skipped/timed-out tasks. Exit 2: configuration/setup/report or checkpoint persistence error. Exit 130: cancelled run with report saved where possible. Synthetic automated tests exercise real subprocesses with a fake model CLI. The separate opt-in live integration check used the existing local Codex sign-in; no credentials were read or included in reports.
 
 **Development history:** Developed locally with Git before publication.
 

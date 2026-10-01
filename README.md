@@ -117,6 +117,4 @@ node dist/cli.js --help
 
 Exit 0: plan validated or run passed. Exit 1: completed run has failed/skipped/timed-out tasks. Exit 2: configuration/setup/report or checkpoint persistence error. Exit 130: cancelled run with report saved where possible. Synthetic automated tests exercise real subprocesses with a fake model CLI. The separate opt-in live integration check used the existing local Codex sign-in; no credentials were read or included in reports.
 
-**Development history:** Developed locally with Git before publication.
-
 Original software © 2026 nazeeh111, [MIT](LICENSE). Codex is an optional external tool; AgentLedger is not affiliated with OpenAI.

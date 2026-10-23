@@ -343,6 +343,35 @@ test("HTML report escapes names, arguments and opinions without remote resources
   assert.ok(document.includes("Model review"));
   assert.ok(document.includes("Model reviews do not change command outcomes."));
 });
+test("report links point to evidence and the first task needing attention", async () => {
+  const r = await root();
+  const report = await execute(
+    spec([
+      cmd("ready", "process.exit(0)"),
+      cmd("broken", "process.exit(1)", { deps: ["ready"] }),
+      cmd("blocked", "process.exit(0)", { deps: ["broken"] }),
+    ]),
+    { root: r, out: "report" },
+  );
+  const document = html(report);
+  assert.ok(document.includes('<a href="report.json">Open evidence JSON</a>'));
+  assert.ok(
+    document.includes(
+      '<a href="#task-broken">Inspect first task needing attention</a>',
+    ),
+  );
+  for (const task of report.tasks) {
+    assert.ok(document.includes(`href="#task-${task.id}"`));
+    assert.ok(document.includes(`id="task-${task.id}"`));
+  }
+  assert.ok(document.includes('aria-label="Task results"'));
+  await saveReport(report, path.join(r, "report"));
+  assert.equal(
+    JSON.parse(await fs.readFile(path.join(r, "report/report.json"), "utf8"))
+      .status,
+    "failed",
+  );
+});
 test("Codex requires separate opt-in; fake CLI respects native flags and structured opinion", async () => {
   const r = await root();
   const fake = path.join(r, "fake-codex");

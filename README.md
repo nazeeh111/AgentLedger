@@ -6,7 +6,7 @@ AgentLedger is a TypeScript/Node.js tool that schedules declared local commands,
 
 Execution requires Node.js 24+ and macOS/Linux, where process groups provide timeout and cancellation handling. The offline example runs without Codex or an API key.
 
-[Open the four-task offline report](https://nazeeh111.github.io/AgentLedger/) · [Inspect its machine-readable evidence](docs/demo/report.json)
+[Open the four-task offline report](https://nazeeh111.github.io/AgentLedger/) · [Inspect its machine-readable evidence](https://nazeeh111.github.io/AgentLedger/report.json)
 
 <a href="https://nazeeh111.github.io/AgentLedger/"><img src="docs/demo/hosted-report-preview.png" alt="Actual AgentLedger hosted offline example: four tasks passed, zero reused, two verified artifacts, with command and review evidence separated." width="960"></a>
 

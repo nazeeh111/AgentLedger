@@ -10,7 +10,7 @@ Execution requires Node.js 24+ and macOS/Linux, where process groups provide tim
 
 <a href="https://nazeeh111.github.io/AgentLedger/"><img src="docs/demo/hosted-report-preview.png" alt="Actual AgentLedger hosted offline example: four tasks passed, zero reused, two verified artifacts, with command and review evidence separated." width="960"></a>
 
-*Hosted offline example captured on 2026-10-22. No model call was used; open the report to inspect the artifact hashes and separate review gate.*
+_Hosted offline example captured on 2026-10-22. No model call was used; open the report to inspect the artifact hashes and separate review gate._
 
 ## Run the complete offline example
 
@@ -34,6 +34,22 @@ flowchart LR
 ```
 
 The [self-contained checked-in example report](docs/demo/index.html) is a separate four-task run. Its timestamps and fingerprints differ from the hosted example; both report the same workflow and separate command checks from review evidence.
+
+## Resume the example and keep its evidence
+
+A second `npm run demo` refuses to replace the existing report directory. To reuse successful commands, resume explicitly:
+
+```sh
+node src/cli.ts examples/offline.json --execute --resume --out demo-report
+```
+
+With the same checkout, Node version and untouched example files, the three command tasks are reused and the artifact review gate runs again. Inspect the `reused` count and each task's status in `demo-report/index.html`. If a declared input changes or an artifact is missing or altered, the affected commands run again. To request a fresh run while keeping the first report, choose a new output directory:
+
+```sh
+node src/cli.ts examples/offline.json --execute --out fresh-report
+```
+
+Keep `index.html` and `report.json` together when sharing a run: HTML is the readable view; JSON carries the structured command results and hashes. The HTML can be opened directly without a server. Review both files for private arguments, paths and optional captured output before sharing. These are unsigned local records, not a reviewer approval. [Resume and recovery limits](#plan-execute-and-resume) describe exactly what can be reused.
 
 ## Recorded evidence
 

@@ -1,10 +1,8 @@
 # AgentLedger
 
-**Run dependent local commands and record their results, output hashes and reviews.**
+**Run local workflows and inspect the evidence.**
 
-AgentLedger is a TypeScript/Node.js tool that schedules declared local commands, records their outcomes, verifies artifact hashes and produces an offline report. Optional Codex CLI reviews appear separately from command results and cannot override failed checks.
-
-Execution requires Node.js 24+ and macOS/Linux, where process groups provide timeout and cancellation handling. The offline example runs without Codex or an API key.
+AgentLedger schedules dependent local commands, verifies output hashes and produces an offline report. Optional Codex CLI reviews appear separately from command results and cannot override failed checks.
 
 [Open the four-task offline report](https://nazeeh111.github.io/AgentLedger/) · [Inspect its machine-readable evidence](https://nazeeh111.github.io/AgentLedger/report.json)
 
@@ -13,6 +11,8 @@ Execution requires Node.js 24+ and macOS/Linux, where process groups provide tim
 _Hosted offline example captured on 2026-10-22. No model call was used; open the report to inspect the artifact hashes and separate review gate._
 
 ## Run the complete offline example
+
+Execution requires Node.js 24+ and macOS/Linux, where process groups provide timeout and cancellation handling. The offline example runs without Codex or an API key.
 
 ```sh
 npm ci
